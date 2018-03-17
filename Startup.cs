@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using campgrounds_api.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace campgrounds_api
 {
@@ -27,6 +31,20 @@ namespace campgrounds_api
         {
             services.AddDbContext<DataContext>(d => d.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
             services.AddMvc();
+            services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddAutoMapper();
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                        .AddJwtBearer(options =>
+                        {
+                            options.TokenValidationParameters = new TokenValidationParameters
+                            {
+                                ValidateIssuerSigningKey = true,
+                                IssuerSigningKey = new SymmetricSecurityKey(
+                                    Encoding.ASCII.GetBytes(Configuration.GetSection("Appsettings:Token").Value)),
+                                ValidateIssuer = false,
+                                ValidateAudience = false
+                            };
+                        });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -36,7 +54,7 @@ namespace campgrounds_api
             {
                 app.UseDeveloperExceptionPage();
             }
-
+            app.UseAuthentication();
             app.UseMvc();
         }
     }
